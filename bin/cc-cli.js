@@ -23,7 +23,26 @@ function loadConfig() {
   try {
     if (fs.existsSync(configPath)) {
       const fileContents = fs.readFileSync(configPath, 'utf8');
-      return yaml.load(fileContents);
+      const config = yaml.load(fileContents);
+      
+      // Set up environment variables from config if not already set
+      if (config.client_id && !process.env.CARDCONNECT_CLIENT_ID) {
+        process.env.CARDCONNECT_CLIENT_ID = config.client_id;
+      }
+      if (config.client_secret && !process.env.CARDCONNECT_CLIENT_SECRET) {
+        process.env.CARDCONNECT_CLIENT_SECRET = config.client_secret;
+      }
+      if (config.username && !process.env.CARDCONNECT_USERNAME) {
+        process.env.CARDCONNECT_USERNAME = config.username;
+      }
+      if (config.password && !process.env.CARDCONNECT_PASSWORD) {
+        process.env.CARDCONNECT_PASSWORD = config.password;
+      }
+      if (config.sitename && !process.env.CARDCONNECT_SITE) {
+        process.env.CARDCONNECT_SITE = config.sitename;
+      }
+      
+      return config;
     }
   } catch (error) {
     console.error(chalk.red('Error loading configuration:'), error.message);

@@ -1,3 +1,7 @@
+# CardPointe API Resources
+- [CardPointe API Refenerce](https://developer.fiserv.com/product/CardPointe/docs/?path=docs/APIs/CardPointeGatewayAPI.md&branch=main)
+
+
 # CoPilot API - Recurring Billing
 
 This document provides an overview and usage examples for the **CoPilot API Billing Plan** endpoints. These endpoints allow you to create and manage recurring billing plans using tokenized and stored customer payment data.
@@ -152,6 +156,7 @@ Cancels the entire billing plan and all remaining payments.
 | acctId             | string  | no       | Account ID of payment method (default used if omitted).                     |
 | amount             | number  | yes      | Amount per payment.                                                         |
 | timeSpan           | number  | yes      | Billing frequency (1=daily, 2=weekly, 3=monthly, 4=yearly).                 |
+  "scheduledAmount": 12.99,
 | every              | number  | yes      | Interval multiplier (1=every, 2=every other).                               |
 | untilCondition     | string  | yes      | End condition (`C`=cancel, `N`=number of payments, `D`=date).               |
 | untilNumPayments   | number  | if `N`   | Number of payments before ending.                                           |
@@ -174,7 +179,6 @@ Cancels the entire billing plan and all remaining payments.
   "actualPaymentDate": null,
   "paymentStatus": "Scheduled",
   "retref": null,
-  "scheduledAmount": 12.99,
   "scheduledPaymentDate": "03/08/2025"
 }
 ```

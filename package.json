@@ -8,7 +8,9 @@
   },
   "scripts": {
     "start": "node bin/cc-cli.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "keywords": [
     "cardpointe",
@@ -27,6 +29,11 @@
     "inquirer": "^8.2.6",
     "dotenv": "^16.3.1",
     "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "axios-mock-adapter": "^1.22.0",
+    "supertest": "^6.3.3"
   },
   "engines": {
     "node": ">=14.0.0"

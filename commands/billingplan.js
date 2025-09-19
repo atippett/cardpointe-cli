@@ -1,43 +1,6 @@
-const axios = require('axios');
+const { CardPointeAPI } = require('../lib/api-client');
 const chalk = require('chalk');
 const ora = require('ora');
-
-// API Client for CardPointe
-class CardPointeAPI {
-  constructor(config) {
-    this.baseURL = config.apiBaseUrl || 'https://api-uat.cardconnect.com';
-    this.apiVersion = config.apiVersion || '1.0';
-    this.token = process.env.CARDCONNECT_TOKEN;
-  }
-
-  getHeaders() {
-    return {
-      'Authorization': `Bearer ${this.token}`,
-      'X-CopilotAPI-Version': this.apiVersion,
-      'Content-Type': 'application/json'
-    };
-  }
-
-  async request(method, endpoint, data = null) {
-    try {
-      const response = await axios({
-        method,
-        url: `${this.baseURL}${endpoint}`,
-        headers: this.getHeaders(),
-        data
-      });
-      return response.data;
-    } catch (error) {
-      if (error.response) {
-        throw new Error(`API Error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
-      } else if (error.request) {
-        throw new Error('Network Error: Unable to reach CardPointe API');
-      } else {
-        throw new Error(`Request Error: ${error.message}`);
-      }
-    }
-  }
-}
 
 // Billing Plan Commands
 const billingPlanCommands = {
