@@ -1,0 +1,10 @@
+profilename: "default"
+	sitename: "cardpointe-uat"
+	apiBaseUrl: "https://api-uat.cardconnect.com"
+	apiVersion: "1.0"
+	
+# Additional profiles example
+# profilename: "production"
+# 	sitename: "cardpointe-prod"
+# 	apiBaseUrl: "https://api.cardconnect.com"
+# 	apiVersion: "1.0"
