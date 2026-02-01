@@ -1,7 +1,3 @@
-# CardPointe API Resources
-- [CardPointe API Refenerce](https://developer.fiserv.com/product/CardPointe/docs/?path=docs/APIs/CardPointeGatewayAPI.md&branch=main)
-
-
 # CoPilot API - Recurring Billing
 
 This document provides an overview and usage examples for the **CoPilot API Billing Plan** endpoints. These endpoints allow you to create and manage recurring billing plans using tokenized and stored customer payment data.
@@ -190,6 +186,6 @@ Cancels the entire billing plan and all remaining payments.
 - [CardPointe Gateway API](https://developer.cardpointe.com/cardconnect-api)  
 - [CoPilot API Documentation](https://developer.cardpointe.com/copilotapi)  
 - [CardPointe Hosted iFrame Tokenizer](https://developer.cardpointe.com/hosted-iframe-tokenizer)  
-- [Terminal API](https://developer.cardpointe.com/terminal-api)  
+- [Terminal API](https://developer.cardpointe.com/terminal-api)
 
 ---

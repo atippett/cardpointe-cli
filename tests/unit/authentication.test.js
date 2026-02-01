@@ -24,97 +24,90 @@ describe('CardPointe Authentication', () => {
     mockAxios.restore();
   });
 
-  describe('CoPilot API OAuth Authentication', () => {
+  describe('CoPilot API Username/Password Authentication', () => {
+    const tokenEndpointTemplate = 'https://accounts.example.com/<sitename>/token';
+    const tokenEndpointResolved = 'https://accounts.example.com/cardpointe-uat/token';
+
     const testConfig = {
+      production: false,
+      sitename: 'cardpointe-uat',
+      username: 'test-user',
+      password: 'test-password',
       client_id: 'test-client',
       client_secret: 'test-secret-123',
-      apiBaseUrl: 'https://api-uat.cardconnect.com',
-      apiVersion: '1.0'
+      apiVersion: '1.0',
+      global: {
+        uat: {
+          copilot_api_url: 'https://api-uat.cardconnect.com',
+          copilot_api_version: '1.0',
+          token_endpoint: tokenEndpointTemplate
+        }
+      }
     };
 
     beforeEach(() => {
       api = new CardPointeAPI(testConfig);
     });
 
-    test('should successfully get OAuth token using client credentials', async () => {
+    test('should successfully get token using username/password grant', async () => {
       const mockTokenResponse = {
         access_token: 'mock-access-token-123',
         token_type: 'Bearer',
         expires_in: 3600
       };
 
-      mockAxios
-        .onPost('https://api-uat.cardconnect.com/oauth/token')
-        .reply(200, mockTokenResponse);
+      mockAxios.onPost(tokenEndpointResolved).reply(200, mockTokenResponse);
 
       const token = await api.getToken();
-      
       expect(token).toBe('mock-access-token-123');
+
       expect(mockAxios.history.post).toHaveLength(1);
-      
       const postData = mockAxios.history.post[0].data;
-      expect(postData).toContain('grant_type=client_credentials');
-      expect(postData).toContain('client_id=test-client');
-      expect(postData).toContain('client_secret=test-secret-123');
+      expect(postData).toContain('grant_type=password');
+      expect(postData).toContain('username=test-user');
+      expect(postData).toContain('password=test-password');
     });
 
     test('should return cached token on subsequent calls', async () => {
-      const mockTokenResponse = {
-        access_token: 'mock-access-token-123',
-        token_type: 'Bearer',
-        expires_in: 3600
-      };
+      mockAxios.onPost(tokenEndpointResolved).reply(200, { access_token: 'mock-access-token-123' });
 
-      mockAxios
-        .onPost('https://api-uat.cardconnect.com/oauth/token')
-        .reply(200, mockTokenResponse);
-
-      // First call
       const token1 = await api.getToken();
-      // Second call
       const token2 = await api.getToken();
 
       expect(token1).toBe('mock-access-token-123');
       expect(token2).toBe('mock-access-token-123');
-      expect(mockAxios.history.post).toHaveLength(1); // Only one API call
+      expect(mockAxios.history.post).toHaveLength(1);
     });
 
-    test('should handle OAuth token request errors', async () => {
-      mockAxios
-        .onPost('https://api-uat.cardconnect.com/oauth/token')
-        .reply(400, {
-          error: 'invalid_client',
-          error_description: 'Invalid client credentials'
-        });
-
-      await expect(api.getToken()).rejects.toThrow('Failed to get OAuth token: Invalid client credentials');
+    test('should handle token request errors', async () => {
+      mockAxios.onPost(tokenEndpointResolved).reply(400, { message: 'Invalid credentials' });
+      await expect(api.getToken()).rejects.toThrow('Failed to get CoPilot token: Invalid credentials');
     });
 
-    test('should generate correct headers with OAuth token', async () => {
-      const mockTokenResponse = {
-        access_token: 'mock-access-token-123',
-        token_type: 'Bearer',
-        expires_in: 3600
-      };
-
-      mockAxios
-        .onPost('https://api-uat.cardconnect.com/oauth/token')
-        .reply(200, mockTokenResponse);
+    test('should generate correct headers with token', async () => {
+      mockAxios.onPost(tokenEndpointResolved).reply(200, { access_token: 'mock-access-token-123' });
 
       const headers = await api.getHeaders();
-
       expect(headers).toEqual({
-        'Authorization': 'Bearer mock-access-token-123',
+        Authorization: 'Bearer mock-access-token-123',
         'X-CopilotAPI-Version': '1.0',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
       });
     });
   });
 
   describe('Direct Token Authentication', () => {
     const testConfig = {
-      apiBaseUrl: 'https://api-uat.cardconnect.com',
-      apiVersion: '1.0'
+      production: false,
+      sitename: 'cardpointe-uat',
+      apiVersion: '1.0',
+      global: {
+        uat: {
+          copilot_api_url: 'https://api-uat.cardconnect.com',
+          copilot_api_version: '1.0'
+        }
+      }
     };
 
     beforeEach(() => {
@@ -144,10 +137,15 @@ describe('CardPointe Authentication', () => {
 
   describe('API Request Authentication', () => {
     const testConfig = {
-      client_id: 'test-client',
-      client_secret: 'test-secret-123',
-      apiBaseUrl: 'https://api-uat.cardconnect.com',
-      apiVersion: '1.0'
+      production: false,
+      sitename: 'cardpointe-uat',
+      apiVersion: '1.0',
+      global: {
+        uat: {
+          copilot_api_url: 'https://api-uat.cardconnect.com',
+          copilot_api_version: '1.0'
+        }
+      }
     };
 
     beforeEach(() => {
@@ -155,12 +153,6 @@ describe('CardPointe Authentication', () => {
     });
 
     test('should include authentication in API requests', async () => {
-      const mockTokenResponse = {
-        access_token: 'mock-access-token-123',
-        token_type: 'Bearer',
-        expires_in: 3600
-      };
-
       const mockBillingPlansResponse = {
         billingPlans: [
           {
@@ -171,9 +163,7 @@ describe('CardPointe Authentication', () => {
         ]
       };
 
-      mockAxios
-        .onPost('https://api-uat.cardconnect.com/oauth/token')
-        .reply(200, mockTokenResponse);
+      process.env.CARDCONNECT_TOKEN = 'mock-access-token-123';
 
       mockAxios
         .onGet('https://api-uat.cardconnect.com/billingplan/list/123456789012')
@@ -191,15 +181,7 @@ describe('CardPointe Authentication', () => {
     });
 
     test('should handle API request errors', async () => {
-      const mockTokenResponse = {
-        access_token: 'mock-access-token-123',
-        token_type: 'Bearer',
-        expires_in: 3600
-      };
-
-      mockAxios
-        .onPost('https://api-uat.cardconnect.com/oauth/token')
-        .reply(200, mockTokenResponse);
+      process.env.CARDCONNECT_TOKEN = 'mock-access-token-123';
 
       mockAxios
         .onGet('https://api-uat.cardconnect.com/billingplan/list/123456789012')
@@ -213,29 +195,43 @@ describe('CardPointe Authentication', () => {
   describe('Authentication Error Handling', () => {
     test('should throw error when no authentication method is available', async () => {
       const testConfig = {
-        apiBaseUrl: 'https://api-uat.cardconnect.com',
-        apiVersion: '1.0'
+        production: false,
+        sitename: 'cardpointe-uat',
+        apiVersion: '1.0',
+        global: {
+          uat: {
+            copilot_api_url: 'https://api-uat.cardconnect.com',
+            copilot_api_version: '1.0'
+          }
+        }
       };
 
       api = new CardPointeAPI(testConfig);
 
       await expect(api.getToken()).rejects.toThrow(
-        'No authentication method available. Set CARDCONNECT_TOKEN or configure client_id/client_secret'
+        'No authentication method available. Set CARDCONNECT_TOKEN or configure username/password'
       );
     });
 
-    test('should throw error when OAuth credentials are incomplete', async () => {
+    test('should throw error when username/password is incomplete', async () => {
       const testConfig = {
-        client_id: 'test-client',
-        // Missing client_secret
-        apiBaseUrl: 'https://api-uat.cardconnect.com',
-        apiVersion: '1.0'
+        production: false,
+        sitename: 'cardpointe-uat',
+        username: 'test-user',
+        // Missing password
+        apiVersion: '1.0',
+        global: {
+          uat: {
+            copilot_api_url: 'https://api-uat.cardconnect.com',
+            copilot_api_version: '1.0'
+          }
+        }
       };
 
       api = new CardPointeAPI(testConfig);
 
       await expect(api.getToken()).rejects.toThrow(
-        'No authentication method available. Set CARDCONNECT_TOKEN or configure client_id/client_secret'
+        'No authentication method available. Set CARDCONNECT_TOKEN or configure username/password'
       );
     });
   });

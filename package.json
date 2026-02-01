@@ -4,10 +4,10 @@
   "description": "CardPointe CLI tool for managing billing plans and payments",
   "main": "index.js",
   "bin": {
-    "cc-cli": "./bin/cc-cli.js"
+    "cardpointe-cli": "./bin/cardpointe-cli"
   },
   "scripts": {
-    "start": "node bin/cc-cli.js",
+    "start": "node bin/cardpointe-cli",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"

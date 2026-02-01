@@ -1,0 +1,27 @@
+# CardPointe CLI Global Configuration (checked in)
+# User-specific profiles live in ~/.cardpointe-cli or config/local.yaml
+
+global:
+  production:
+    token_endpoint: https://accounts.cardconnect.com/auth/realms/cardconnect/protocol/openid-connect/token
+    copilot_api_url: https://api.cardconnect.com
+    cardpointe_api_url: https://<site>.cardconnect.com/cardconnect/rest/
+    copilot_api_version: "1.0"
+
+  uat:
+    token_endpoint: https://accountsuat.cardconnect.com/auth/realms/cardconnect/protocol/openid-connect/token
+    copilot_api_url: https://api-uat.cardconnect.com
+    cardpointe_api_url: https://<site>-uat.cardconnect.com/cardconnect/rest/
+    copilot_api_version: "1.0"
+
+# API defaults
+apiBaseUrl: "https://api-uat.cardconnect.com"
+apiVersion: "1.0"
+
+# Command-specific overrides
+command:
+  billingplan:
+    production:
+      copilot_api_url: https://api.cardconnect.com
+    uat:
+      copilot_api_url: https://copilot-api-uat.cardconnect.com

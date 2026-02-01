@@ -1,4 +1,4 @@
-# cc-cli - CardPointe CLI Tool
+# cardpointe-cli - CardPointe CLI Tool
 
 A command-line interface for managing CardPointe billing plans and payments using the CoPilot API.
 
@@ -23,45 +23,114 @@ A command-line interface for managing CardPointe billing plans and payments usin
 
 4. Make the CLI executable:
    ```bash
-   chmod +x bin/cc-cli.js
+   chmod +x bin/cardpointe-cli
    ```
 
 ## Configuration
 
+### Global Configuration (checked in)
+
+Shared config lives in `config/global.yaml` and is versioned. It includes API endpoints, token URLs, and command overrides.
+
+### Profile Configuration (user-specific, not checked in)
+
+Create `~/.cardpointe-cli` (or `config/local.yaml`) with your credentials:
+
+```yaml
+profiles:
+  core:
+    production: false  # true for production, false for UAT
+    sitename: "cardpointe-uat"
+    username: "your_username"
+    password: "your_password"
+    client_id: your_client_id
+    client_secret: your_client_secret
+```
+
+Profile config is merged with `config/global.yaml`. User profiles override global defaults.
+
 ### Environment Variables
 
-Create a `.env` file with your CardPointe API credentials:
+Create a `.env` file for API token (optional):
 
 ```bash
 CARDCONNECT_TOKEN=your_token_here
 ```
 
-### Profile Configuration
+**Environment Selection:**
+- `production: true` → Uses `https://api.cardconnect.com` (Production)
+- `production: false` → Uses `https://api-uat.cardconnect.com` (UAT)
 
-Edit `config/.profile` to configure your API settings:
-
-```yaml
-profilename: "default"
-	sitename: "cardpointe-uat"
-	apiBaseUrl: "https://api-uat.cardconnect.com"
-	apiVersion: "1.0"
-```
+**Profile Selection:**
+- CLI defaults to the first profile in the configuration
+- Use `-p <profileName>` to specify a different profile
+- Example: `./bin/cardpointe-cli merchant.get 123456789012 -p production`
 
 ## Usage
 
 ### List Billing Plans
 
 ```bash
-# List all billing plans for a merchant
-./bin/cc-cli.js billingplan.list <merchantId>
+# List all billing plans for a merchant (uses default profile)
+./bin/cardpointe-cli billingplan.list <merchantId>
+
+# List billing plans using specific profile
+./bin/cardpointe-cli billingplan.list <merchantId> -p <profileName>
+
+# Examples
+./bin/cardpointe-cli billingplan.list 123456789012
+./bin/cardpointe-cli billingplan.list 123456789012 -p production
+```
+
+### Export Billing Plans from a CSV
+
+Provide an input CSV where **row 1 is the header** and one column contains the billing plan ID (defaults: `billingPlanId`, `planId`, or `id`).
+The file must also include a merchant id column (defaults: `merchant_id`, `merchantId`, `merchId`, `mid`, or `Location`).
+
+```bash
+# Export billing plan details for each row in input.csv
+./bin/cardpointe-cli billingplan.export input.csv
+
+# Or read from stdin (your preferred usage)
+./bin/cardpointe-cli billingplan.export < input.csv
+
+# Limit export to first N rows
+./bin/cardpointe-cli billingplan.export --limit 10 < input.csv
+
+# By default, output is written to stdout. To write a file:
+./bin/cardpointe-cli billingplan.export input.csv -o output.csv
+```
+
+### Get Merchant Information
+
+```bash
+# Get merchant information (uses default profile)
+./bin/cardpointe-cli merchant.get <merchantId>
+
+# Get merchant information using specific profile
+./bin/cardpointe-cli merchant.get <merchantId> -p <profileName>
+
+# Examples
+./bin/cardpointe-cli merchant.get 123456789012
+./bin/cardpointe-cli merchant.get 123456789012 -p uat
+```
+
+### Cancel a Billing Plan
+
+```bash
+./bin/cardpointe-cli billingplan.cancel <merchantId> <billingPlanId>
 
 # Example
-./bin/cc-cli.js billingplan.list 123456789012
+./bin/cardpointe-cli billingplan.cancel 496180953887 24192607
 ```
 
 ### Available Commands
 
 - `billingplan.list <merchantId>` - List all billing plans for a merchant
+- `billingplan.get <merchantId> <billingPlanId>` - Get detailed information for a specific billing plan
+- `billingplan.cancel <merchantId> <billingPlanId>` - Cancel a billing plan and all remaining payments
+- `billingplan.export [inputCsv]` - Export billing plan details (reads stdin if inputCsv omitted)
+- `merchant.get <merchantId>` - Get merchant information
 
 ## Features
 
@@ -86,12 +155,12 @@ This tool requires:
 ```
 cardpointe-cli/
 ├── bin/
-│   └── cc-cli.js          # Main CLI entry point
+│   └── cardpointe-cli     # Main CLI entry point
 ├── commands/
 │   └── billingplan.js     # Billing plan commands
 ├── config/
-│   ├── .profile           # Configuration file
-│   └── profile.example.yaml
+│   ├── global.yaml        # Shared config (checked in)
+│   └── local.example.yaml
 ├── lib/                   # Utility libraries
 ├── package.json
 └── README.md
@@ -100,7 +169,7 @@ cardpointe-cli/
 ### Adding New Commands
 
 1. Create a new command file in `commands/`
-2. Import and register the command in `bin/cc-cli.js`
+2. Import and register the command in `bin/cardpointe-cli`
 3. Follow the existing pattern for API calls and output formatting
 
 ## License

@@ -21,8 +21,8 @@ jest.mock('path', () => {
   return {
     ...actualPath,
     join: jest.fn((...args) => {
-      if (args.includes('config') && args.includes('.profile')) {
-        return actualPath.join(__dirname, 'fixtures', '.profile');
+      if (args.includes('.cardpointe-cli') || (args.includes('config') && (args.includes('.profile') || args.includes('local.yaml')))) {
+        return actualPath.join(__dirname, 'fixtures', 'local.yaml');
       }
       return actualPath.join(...args);
     })

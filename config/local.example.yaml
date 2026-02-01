@@ -1,3 +1,5 @@
+# Copy to config/local.yaml and add your credentials
+# config/local.yaml is gitignored
 profilename: "default"
 	sitename: "cardpointe-uat"
 	apiBaseUrl: "https://api-uat.cardconnect.com"

@@ -52,9 +52,10 @@ console.log(chalk.gray('─'.repeat(40)));
 
 ### Billing Plans
 - ✅ `billingplan.list <merchantId>` - List all billing plans
-- 🔄 `billingplan.get <merchantId> <billingPlanId>` - Get specific billing plan
+- ✅ `billingplan.get <merchantId> <billingPlanId>` - Get specific billing plan
+- ✅ `billingplan.cancel <merchantId> <billingPlanId>` - Cancel billing plan and all remaining payments
+- ✅ `billingplan.export [inputCsv]` - Export billing plan details (reads stdin if inputCsv omitted)
 - 🔄 `billingplan.create` - Create new billing plan
-- 🔄 `billingplan.cancel <merchantId> <billingPlanId>` - Cancel billing plan
 
 ### Profiles
 - 🔄 `profile.list <merchantId>` - List payment profiles

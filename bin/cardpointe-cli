@@ -1,0 +1,226 @@
+#!/usr/bin/env node
+
+const { Command } = require('commander');
+const chalk = require('chalk');
+const path = require('path');
+const fs = require('fs');
+const yaml = require('js-yaml');
+const os = require('os');
+
+const billingPlanCommands = require('../commands/billingplan');
+
+const program = new Command();
+
+program
+  .name('cardpointe-cli')
+  .description('CardPointe CLI tool for managing billing plans and payments')
+  .version('1.0.0')
+  .option('-p, --profile <name>', 'Configuration profile to use (global)');
+
+function getProfileNameFromOptions(commandOptions) {
+  const globalProfile = program.opts().profile;
+  return commandOptions?.profile || globalProfile;
+}
+
+function getFirstProfileName(profiles) {
+  if (!profiles || typeof profiles !== 'object') return 'default';
+  const names = Object.keys(profiles);
+  return names.length > 0 ? names[0] : 'default';
+}
+
+function resolveConfigPath() {
+  const homePath = path.join(os.homedir(), '.cardpointe-cli');
+  const legacyPath = path.join(__dirname, '../config/local.yaml');
+  if (fs.existsSync(homePath)) return homePath;
+  return legacyPath;
+}
+
+const GLOBAL_CONFIG_PATH = path.join(__dirname, '../config/global.yaml');
+
+function loadGlobalConfig() {
+  try {
+    if (fs.existsSync(GLOBAL_CONFIG_PATH)) {
+      const contents = fs.readFileSync(GLOBAL_CONFIG_PATH, 'utf8');
+      return yaml.load(contents) || {};
+    }
+  } catch (err) {
+    // Non-fatal; fall back to user config only
+  }
+  return {};
+}
+
+function mergeConfig(globalConfig, userConfig) {
+  return {
+    ...globalConfig,
+    ...userConfig,
+    global: userConfig.global ?? globalConfig.global,
+    command: userConfig.command ?? globalConfig.command,
+    profiles: userConfig.profiles ?? globalConfig.profiles,
+  };
+}
+
+function loadConfig() {
+  const globalConfig = loadGlobalConfig();
+  const configPath = resolveConfigPath();
+  try {
+    if (fs.existsSync(configPath)) {
+      const contents = fs.readFileSync(configPath, 'utf8');
+      const userConfig = yaml.load(contents) || {};
+      const config = mergeConfig(globalConfig, userConfig);
+      const activeName = config.profile || getFirstProfileName(config.profiles);
+      const activeProfile = (config.profiles && config.profiles[activeName]) || {};
+      const flattened = { ...activeProfile, ...config, global: config.global };
+      delete flattened.profiles;
+      delete flattened.profile;
+
+      if (flattened.client_id && !process.env.CARDCONNECT_CLIENT_ID) {
+        process.env.CARDCONNECT_CLIENT_ID = flattened.client_id;
+      }
+      if (flattened.client_secret && !process.env.CARDCONNECT_CLIENT_SECRET) {
+        process.env.CARDCONNECT_CLIENT_SECRET = flattened.client_secret;
+      }
+      if (flattened.username && !process.env.CARDCONNECT_USERNAME) {
+        process.env.CARDCONNECT_USERNAME = flattened.username;
+      }
+      if (flattened.password && !process.env.CARDCONNECT_PASSWORD) {
+        process.env.CARDCONNECT_PASSWORD = flattened.password;
+      }
+      if (flattened.sitename && !process.env.CARDCONNECT_SITE) {
+        process.env.CARDCONNECT_SITE = flattened.sitename;
+      }
+      return flattened;
+    }
+    // No user config; use global only
+    const flattened = { ...globalConfig };
+    delete flattened.profiles;
+    delete flattened.profile;
+    return flattened;
+  } catch (err) {
+    console.error(chalk.red('Error loading configuration:'), err.message);
+    process.exit(1);
+  }
+  return globalConfig;
+}
+
+function loadConfigWithProfile(profileName) {
+  const globalConfig = loadGlobalConfig();
+  const configPath = resolveConfigPath();
+  try {
+    if (fs.existsSync(configPath)) {
+      const contents = fs.readFileSync(configPath, 'utf8');
+      const userConfig = yaml.load(contents) || {};
+      const config = mergeConfig(globalConfig, userConfig);
+      const activeProfile = config.profiles && config.profiles[profileName];
+      if (!activeProfile) {
+        console.error(chalk.red(`Error: Profile '${profileName}' not found`));
+        console.log(chalk.yellow('Available:'), Object.keys(config.profiles || {}).join(', '));
+        process.exit(1);
+      }
+      const flattened = { ...activeProfile, ...config, global: config.global };
+      delete flattened.profiles;
+      delete flattened.profile;
+
+      if (flattened.client_id && !process.env.CARDCONNECT_CLIENT_ID) {
+        process.env.CARDCONNECT_CLIENT_ID = flattened.client_id;
+      }
+      if (flattened.client_secret && !process.env.CARDCONNECT_CLIENT_SECRET) {
+        process.env.CARDCONNECT_CLIENT_SECRET = flattened.client_secret;
+      }
+      if (flattened.username && !process.env.CARDCONNECT_USERNAME) {
+        process.env.CARDCONNECT_USERNAME = flattened.username;
+      }
+      if (flattened.password && !process.env.CARDCONNECT_PASSWORD) {
+        process.env.CARDCONNECT_PASSWORD = flattened.password;
+      }
+      if (flattened.sitename && !process.env.CARDCONNECT_SITE) {
+        process.env.CARDCONNECT_SITE = flattened.sitename;
+      }
+      return flattened;
+    }
+  } catch (err) {
+    console.error(chalk.red('Error loading configuration:'), err.message);
+    process.exit(1);
+  }
+  return {};
+}
+
+const config = loadConfig();
+
+program.command('billingplan').description('Manage billing plans').action(() => program.help());
+
+program
+  .command('billingplan.list <merchantId>')
+  .description('List all billing plans for a merchant')
+  .option('-p, --profile <name>', 'Configuration profile to use')
+  .option('-f, --format <format>', 'Output format (pretty, table, csv)', 'pretty')
+  .option('-v, --verbose', 'Enable verbose debug output')
+  .option('--page-number <number>', 'Page number')
+  .option('--page <number>', 'Page number')
+  .option('--size <number>', 'Page size')
+  .option('--limit <number>', 'Limit')
+  .option('--offset <number>', 'Offset')
+  .option('--skip <number>', 'Skip')
+  .action(async (merchantId, options) => {
+    try {
+      const profileName = getProfileNameFromOptions(options);
+      const activeConfig = profileName ? loadConfigWithProfile(profileName) : config;
+      await billingPlanCommands.listBillingPlans(merchantId, options, activeConfig);
+    } catch (err) {
+      console.error(chalk.red('Error:'), err.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('billingplan.get <merchantId> <billingPlanId>')
+  .description('Get detailed information for a specific billing plan')
+  .option('-p, --profile <name>', 'Configuration profile to use')
+  .option('-v, --verbose', 'Enable verbose debug output')
+  .action(async (merchantId, billingPlanId, options) => {
+    try {
+      const profileName = getProfileNameFromOptions(options);
+      const activeConfig = profileName ? loadConfigWithProfile(profileName) : config;
+      await billingPlanCommands.getBillingPlan(merchantId, billingPlanId, options, activeConfig);
+    } catch (err) {
+      console.error(chalk.red('Error:'), err.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('billingplan.cancel <merchantId> <billingPlanId>')
+  .description('Cancel a billing plan and all remaining payments')
+  .option('-p, --profile <name>', 'Configuration profile to use')
+  .option('-v, --verbose', 'Enable verbose debug output')
+  .action(async (merchantId, billingPlanId, options) => {
+    try {
+      const profileName = getProfileNameFromOptions(options);
+      const activeConfig = profileName ? loadConfigWithProfile(profileName) : config;
+      await billingPlanCommands.cancelBillingPlan(merchantId, billingPlanId, options, activeConfig);
+    } catch (err) {
+      console.error(chalk.red('Error:'), err.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('billingplan.export [inputCsv]')
+  .description('Export billing plan details from CSV (reads stdin if inputCsv omitted)')
+  .option('-p, --profile <name>', 'Configuration profile to use')
+  .option('-o, --output <file>', 'Output CSV file path')
+  .option('--limit <number>', 'Limit export to first N rows')
+  .option('--plan-id-column <name>', 'Plan ID column header')
+  .option('--merchant-id-column <name>', 'Merchant ID column header')
+  .option('-v, --verbose', 'Enable verbose debug output')
+  .action(async (inputCsv, options) => {
+    try {
+      const profileName = getProfileNameFromOptions(options);
+      const activeConfig = profileName ? loadConfigWithProfile(profileName) : config;
+      await billingPlanCommands.exportBillingPlans(inputCsv, options, activeConfig);
+    } catch (err) {
+      console.error(chalk.red('Error:'), err.message);
+      process.exit(1);
+    }
+  });
+
+program.parse();
