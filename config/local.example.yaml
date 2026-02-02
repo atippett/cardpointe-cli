@@ -1,12 +1,24 @@
 # Copy to config/local.yaml and add your credentials
 # config/local.yaml is gitignored
-profilename: "default"
-	sitename: "cardpointe-uat"
-	apiBaseUrl: "https://api-uat.cardconnect.com"
-	apiVersion: "1.0"
-	
-# Additional profiles example
-# profilename: "production"
-# 	sitename: "cardpointe-prod"
-# 	apiBaseUrl: "https://api.cardconnect.com"
-# 	apiVersion: "1.0"
+#
+# New format (recommended): separate copilot and cardpointe credentials
+profiles:
+  default:
+    production: false
+    sitename: "cardpointe-uat"
+    copilot:
+      username: "your-copilot-username"
+      password: "your-copilot-password"
+      client_id: "your-client-id"
+      client_secret: "your-client-secret"
+    cardpointe:
+      username: "your-gateway-username"
+      password: "your-gateway-password"
+
+# Old format: flat credentials (CoPilot only; add cardpointe_username/cardpointe_password for Gateway)
+#  default:
+#    sitename: "cardpointe-uat"
+#    username: "your-username"
+#    password: "your-password"
+#    client_id: "your-client-id"
+#    client_secret: "your-client-secret"

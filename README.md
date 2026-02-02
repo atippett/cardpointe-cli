@@ -34,18 +34,24 @@ Shared config lives in `config/global.yaml` and is versioned. It includes API en
 
 ### Profile Configuration (user-specific, not checked in)
 
-Create `~/.cardpointe-cli` (or `config/local.yaml`) with your credentials:
+Create `~/.cardpointe-cli` (or `config/local.yaml`) with your credentials. CoPilot and CardPointe Gateway use different credentials:
 
 ```yaml
 profiles:
   core:
     production: false  # true for production, false for UAT
     sitename: "cardpointe-uat"
-    username: "your_username"
-    password: "your_password"
-    client_id: your_client_id
-    client_secret: your_client_secret
+    copilot:
+      username: "your_copilot_username"
+      password: "your_copilot_password"
+      client_id: your_client_id
+      client_secret: your_client_secret
+    cardpointe:
+      username: "your_gateway_username"
+      password: "your_gateway_password"
 ```
+
+Old format (flat) is still supported: use `username`/`password` for CoPilot and optionally `cardpointe_username`/`cardpointe_password` for Gateway.
 
 Profile config is merged with `config/global.yaml`. User profiles override global defaults.
 
@@ -101,6 +107,17 @@ The file must also include a merchant id column (defaults: `merchant_id`, `merch
 ./bin/cardpointe-cli billingplan.export input.csv -o output.csv
 ```
 
+### Get Payment Profile
+
+```bash
+# Get profile details from CardPointe Gateway
+./bin/cardpointe-cli profile.get <profileId> <accountId> <merchantId>
+
+# Example
+./bin/cardpointe-cli profile.get 11416055053282854657 166505510 496474011889
+./bin/cardpointe-cli profile.get <profileId> <accountId> <merchantId> -p core-uat
+```
+
 ### Get Merchant Information
 
 ```bash
@@ -127,6 +144,7 @@ The file must also include a merchant id column (defaults: `merchant_id`, `merch
 ### Available Commands
 
 - `billingplan.list <merchantId>` - List all billing plans for a merchant
+- `profile.get <profileId> <accountId> <merchantId>` - Get payment profile details from CardPointe Gateway
 - `billingplan.get <merchantId> <billingPlanId>` - Get detailed information for a specific billing plan
 - `billingplan.cancel <merchantId> <billingPlanId>` - Cancel a billing plan and all remaining payments
 - `billingplan.export [inputCsv]` - Export billing plan details (reads stdin if inputCsv omitted)

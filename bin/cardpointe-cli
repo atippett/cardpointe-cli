@@ -8,6 +8,8 @@ const yaml = require('js-yaml');
 const os = require('os');
 
 const billingPlanCommands = require('../commands/billingplan');
+const profileCommands = require('../commands/profile');
+const testCommands = require('../commands/test');
 
 const program = new Command();
 
@@ -15,7 +17,8 @@ program
   .name('cardpointe-cli')
   .description('CardPointe CLI tool for managing billing plans and payments')
   .version('1.0.0')
-  .option('-p, --profile <name>', 'Configuration profile to use (global)');
+  .option('-p, --profile <name>', 'Configuration profile to use (global)')
+  .action(() => program.help());
 
 function getProfileNameFromOptions(commandOptions) {
   const globalProfile = program.opts().profile;
@@ -33,6 +36,24 @@ function resolveConfigPath() {
   const legacyPath = path.join(__dirname, '../config/local.yaml');
   if (fs.existsSync(homePath)) return homePath;
   return legacyPath;
+}
+
+function ensureConfigFilePermissions() {
+  if (process.platform === 'win32') return;
+  const paths = [
+    path.join(os.homedir(), '.cardpointe-cli'),
+    path.join(__dirname, '../config/local.yaml')
+  ];
+  for (const configPath of paths) {
+    try {
+      if (fs.existsSync(configPath)) {
+        fs.chmodSync(configPath, 0o600);
+      }
+    } catch (err) {
+      // Non-fatal; log but continue
+      console.error(chalk.yellow('Warning: Could not set permissions on'), configPath, err.message);
+    }
+  }
 }
 
 const GLOBAL_CONFIG_PATH = path.join(__dirname, '../config/global.yaml');
@@ -59,6 +80,20 @@ function mergeConfig(globalConfig, userConfig) {
   };
 }
 
+function flattenCredentials(flat) {
+  const c = flat.copilot || {};
+  const g = flat.cardpointe || {};
+  return {
+    ...flat,
+    username: c.username ?? flat.username,
+    password: c.password ?? flat.password,
+    client_id: c.client_id ?? flat.client_id,
+    client_secret: c.client_secret ?? flat.client_secret,
+    cardpointe_username: g.username ?? flat.cardpointe_username,
+    cardpointe_password: g.password ?? flat.cardpointe_password
+  };
+}
+
 function loadConfig() {
   const globalConfig = loadGlobalConfig();
   const configPath = resolveConfigPath();
@@ -69,9 +104,10 @@ function loadConfig() {
       const config = mergeConfig(globalConfig, userConfig);
       const activeName = config.profile || getFirstProfileName(config.profiles);
       const activeProfile = (config.profiles && config.profiles[activeName]) || {};
-      const flattened = { ...activeProfile, ...config, global: config.global };
+      let flattened = { ...activeProfile, ...config, global: config.global };
       delete flattened.profiles;
       delete flattened.profile;
+      flattened = flattenCredentials(flattened);
 
       if (flattened.client_id && !process.env.CARDCONNECT_CLIENT_ID) {
         process.env.CARDCONNECT_CLIENT_ID = flattened.client_id;
@@ -116,9 +152,10 @@ function loadConfigWithProfile(profileName) {
         console.log(chalk.yellow('Available:'), Object.keys(config.profiles || {}).join(', '));
         process.exit(1);
       }
-      const flattened = { ...activeProfile, ...config, global: config.global };
+      let flattened = { ...activeProfile, ...config, global: config.global };
       delete flattened.profiles;
       delete flattened.profile;
+      flattened = flattenCredentials(flattened);
 
       if (flattened.client_id && !process.env.CARDCONNECT_CLIENT_ID) {
         process.env.CARDCONNECT_CLIENT_ID = flattened.client_id;
@@ -144,11 +181,93 @@ function loadConfigWithProfile(profileName) {
   return {};
 }
 
+ensureConfigFilePermissions();
 const config = loadConfig();
 
-program.command('billingplan').description('Manage billing plans').action(() => program.help());
+function setupCustomHelp() {
+  const API_GROUPS = {
+    copilot: 'CoPilot API',
+    gateway: 'CardPointe Gateway API',
+    other: 'Other'
+  };
+  program.configureHelp({
+    formatHelp: (cmd, helper) => {
+      const termWidth = helper.padWidth(cmd, helper);
+      const helpWidth = helper.helpWidth || 80;
+      const itemIndentWidth = 2;
+      const itemSeparatorWidth = 2;
+      function formatItem(term, description) {
+        if (description) {
+          const fullText = `${term.padEnd(termWidth + itemSeparatorWidth)}${description}`;
+          return helper.wrap(fullText, helpWidth - itemIndentWidth, termWidth + itemSeparatorWidth);
+        }
+        return term;
+      }
+      function formatList(textArray) {
+        return textArray.join('\n').replace(/^/gm, ' '.repeat(itemIndentWidth));
+      }
+      let output = [`Usage: ${helper.commandUsage(cmd)}`, ''];
+      const commandDescription = helper.commandDescription(cmd);
+      if (commandDescription.length > 0) {
+        output = output.concat([helper.wrap(commandDescription, helpWidth, 0), '']);
+      }
+      const argumentList = helper.visibleArguments(cmd).map((arg) =>
+        formatItem(helper.argumentTerm(arg), helper.argumentDescription(arg))
+      );
+      if (argumentList.length > 0) {
+        output = output.concat(['Arguments:', formatList(argumentList), '']);
+      }
+      const optionList = helper.visibleOptions(cmd).map((opt) =>
+        formatItem(helper.optionTerm(opt), helper.optionDescription(opt))
+      );
+      if (optionList.length > 0) {
+        output = output.concat(['Options:', formatList(optionList), '']);
+      }
+      const commands = helper.visibleCommands(cmd);
+      if (commands.length > 0) {
+        const byApi = { copilot: [], gateway: [], other: [] };
+        for (const c of commands) {
+          const api = c.api || 'other';
+          byApi[api] = byApi[api] || [];
+          byApi[api].push(c);
+        }
+        const order = ['copilot', 'gateway', 'other'];
+        for (const api of order) {
+          const list = byApi[api] || [];
+          if (list.length > 0) {
+            output = output.concat(['', `${API_GROUPS[api] || api}:`, '']);
+            const items = list.map((c) =>
+              formatItem(helper.subcommandTerm(c), helper.subcommandDescription(c))
+            );
+            output = output.concat([formatList(items)]);
+          }
+        }
+      }
+      return output.join('\n');
+    }
+  });
+}
 
-program
+const billingplanCmd = program.command('billingplan').description('Manage billing plans').action(() => program.help());
+billingplanCmd.api = 'copilot';
+const profileCmd = program.command('profile').description('Manage payment profiles').action(() => program.help());
+profileCmd.api = 'gateway';
+
+const testCmd = program
+  .command('test [testName]')
+  .description('List or run unit tests (e.g. auth.copilot)')
+  .option('-p, --profile <name>', 'Configuration profile to use')
+  .action(async (testName, options) => {
+    try {
+      await testCommands.runTests({ ...options, args: testName ? [testName] : [] }, config);
+    } catch (err) {
+      console.error(chalk.red('Error:'), err.message);
+      process.exit(1);
+    }
+  });
+testCmd.api = 'other';
+
+const listCmd = program
   .command('billingplan.list <merchantId>')
   .description('List all billing plans for a merchant')
   .option('-p, --profile <name>', 'Configuration profile to use')
@@ -170,8 +289,9 @@ program
       process.exit(1);
     }
   });
+listCmd.api = 'copilot';
 
-program
+const getCmd = program
   .command('billingplan.get <merchantId> <billingPlanId>')
   .description('Get detailed information for a specific billing plan')
   .option('-p, --profile <name>', 'Configuration profile to use')
@@ -186,8 +306,9 @@ program
       process.exit(1);
     }
   });
+getCmd.api = 'copilot';
 
-program
+const cancelCmd = program
   .command('billingplan.cancel <merchantId> <billingPlanId>')
   .description('Cancel a billing plan and all remaining payments')
   .option('-p, --profile <name>', 'Configuration profile to use')
@@ -202,8 +323,26 @@ program
       process.exit(1);
     }
   });
+cancelCmd.api = 'copilot';
 
-program
+const profileGetCmd = program
+  .command('profile.get <profileId> <accountId> <merchantId>')
+  .description('Get payment profile details from CardPointe Gateway')
+  .option('-p, --profile <name>', 'Configuration profile to use')
+  .option('-v, --verbose', 'Enable verbose debug output')
+  .action(async (profileId, accountId, merchantId, options) => {
+    try {
+      const profileName = getProfileNameFromOptions(options);
+      const activeConfig = profileName ? loadConfigWithProfile(profileName) : config;
+      await profileCommands.getProfile(profileId, accountId, merchantId, options, activeConfig);
+    } catch (err) {
+      console.error(chalk.red('Error:'), err.message);
+      process.exit(1);
+    }
+  });
+profileGetCmd.api = 'gateway';
+
+const exportCmd = program
   .command('billingplan.export [inputCsv]')
   .description('Export billing plan details from CSV (reads stdin if inputCsv omitted)')
   .option('-p, --profile <name>', 'Configuration profile to use')
@@ -222,5 +361,7 @@ program
       process.exit(1);
     }
   });
+exportCmd.api = 'copilot';
 
+setupCustomHelp();
 program.parse();

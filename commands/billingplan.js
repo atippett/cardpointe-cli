@@ -112,10 +112,10 @@ async function fetchProfileData(config, profileId, accountId, merchId, verbose =
   const url = `${base}${endpointPath}`;
 
   // CardPointe "cardconnect/rest" endpoints typically use Basic auth.
-  const username = process.env.CARDCONNECT_USERNAME || config.username;
-  const password = process.env.CARDCONNECT_PASSWORD || config.password;
+  const username = process.env.CARDCONNECT_GATEWAY_USERNAME || config.cardpointe_username || config.username;
+  const password = process.env.CARDCONNECT_GATEWAY_PASSWORD || config.cardpointe_password || config.password;
   if (!username || !password) {
-    throw new Error('No username/password available for profile lookup');
+    throw new Error('No username/password available for profile lookup (use cardpointe.username/password in config)');
   }
 
   const headers = {

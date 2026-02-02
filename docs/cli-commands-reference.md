@@ -58,8 +58,8 @@ console.log(chalk.gray('─'.repeat(40)));
 - 🔄 `billingplan.create` - Create new billing plan
 
 ### Profiles
+- ✅ `profile.get <profileId> <accountId> <merchantId>` - Get payment profile from CardPointe Gateway
 - 🔄 `profile.list <merchantId>` - List payment profiles
-- 🔄 `profile.get <merchantId> <profileId>` - Get profile details
 - 🔄 `profile.create` - Create new profile
 
 ### Transactions
