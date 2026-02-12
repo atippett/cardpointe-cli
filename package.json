@@ -4,10 +4,10 @@
   "description": "CardPointe CLI tool for managing billing plans and payments",
   "main": "index.js",
   "bin": {
-    "cardpointe-cli": "./bin/cardpointe-cli"
+    "fiserv-cli": "./bin/fiserv-cli"
   },
   "scripts": {
-    "start": "node bin/cardpointe-cli",
+    "start": "node bin/fiserv-cli",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"

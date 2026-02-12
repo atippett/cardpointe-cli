@@ -14,7 +14,7 @@ const testCommands = require('../commands/test');
 const program = new Command();
 
 program
-  .name('cardpointe-cli')
+  .name('fiserv-cli')
   .description('CardPointe CLI tool for managing billing plans and payments')
   .version('1.0.0')
   .option('-p, --profile <name>', 'Configuration profile to use (global)')
@@ -32,15 +32,18 @@ function getFirstProfileName(profiles) {
 }
 
 function resolveConfigPath() {
-  const homePath = path.join(os.homedir(), '.cardpointe-cli');
+  const homePath = path.join(os.homedir(), '.fiserv-cli');
   const legacyPath = path.join(__dirname, '../config/local.yaml');
+  const legacyHome = path.join(os.homedir(), '.cardpointe-cli');
   if (fs.existsSync(homePath)) return homePath;
+  if (fs.existsSync(legacyHome)) return legacyHome;
   return legacyPath;
 }
 
 function ensureConfigFilePermissions() {
   if (process.platform === 'win32') return;
   const paths = [
+    path.join(os.homedir(), '.fiserv-cli'),
     path.join(os.homedir(), '.cardpointe-cli'),
     path.join(__dirname, '../config/local.yaml')
   ];
@@ -254,12 +257,14 @@ const profileCmd = program.command('profile').description('Manage payment profil
 profileCmd.api = 'gateway';
 
 const testCmd = program
-  .command('test [testName]')
-  .description('List or run unit tests (e.g. auth.copilot)')
+  .command('test [testName] [merchantId]')
+  .description('List or run unit tests (e.g. auth.copilot, auth.cardpointe <merchantId>)')
   .option('-p, --profile <name>', 'Configuration profile to use')
-  .action(async (testName, options) => {
+  .action(async (testName, merchantId, options) => {
     try {
-      await testCommands.runTests({ ...options, args: testName ? [testName] : [] }, config);
+      const profileName = getProfileNameFromOptions(options);
+      const activeConfig = profileName ? loadConfigWithProfile(profileName) : config;
+      await testCommands.runTests({ ...options, profile: profileName, args: testName ? [testName, merchantId] : [], merchantId }, activeConfig);
     } catch (err) {
       console.error(chalk.red('Error:'), err.message);
       process.exit(1);

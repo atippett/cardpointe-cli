@@ -29,7 +29,7 @@ async function getProfile(profileId, accountId, merchantId, options, config) {
     const password = process.env.CARDCONNECT_GATEWAY_PASSWORD || config.cardpointe_password || config.password;
     if (!username || !password) {
       spinner.fail('No username/password available');
-      throw new Error('Configure cardpointe.username/password (or username/password) in ~/.cardpointe-cli or config/local.yaml');
+      throw new Error('Configure cardpointe.username/password (or username/password) in ~/.fiserv-cli or config/local.yaml');
     }
 
     const endpointPath = `profile/${encodeURIComponent(profileId)}/${encodeURIComponent(accountId)}/${encodeURIComponent(merchantId)}`;
@@ -63,4 +63,23 @@ async function getProfile(profileId, accountId, merchantId, options, config) {
   }
 }
 
-module.exports = { getProfile };
+async function testCardPointeCredentials(config, merchId = '496082673888') {
+  const base = getCardPointeRestBaseUrl(config);
+  if (!base) {
+    throw new Error('No cardpointe_api_url configured (global.*.cardpointe_api_url)');
+  }
+  const username = process.env.CARDCONNECT_GATEWAY_USERNAME || config.cardpointe_username || config.username;
+  const password = process.env.CARDCONNECT_GATEWAY_PASSWORD || config.cardpointe_password || config.password;
+  if (!username || !password) {
+    throw new Error('Configure cardpointe.username/password in ~/.fiserv-cli or config/local.yaml');
+  }
+  const headers = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
+  };
+  const response = await require('axios').put(base, { merchid: merchId }, { headers });
+  return response;
+}
+
+module.exports = { getProfile, testCardPointeCredentials, getCardPointeRestBaseUrl };

@@ -1,4 +1,4 @@
-# cardpointe-cli - CardPointe CLI Tool
+# fiserv-cli - CardPointe / Fiserv CLI Tool
 
 A command-line interface for managing CardPointe billing plans and payments using the CoPilot API.
 
@@ -23,7 +23,7 @@ A command-line interface for managing CardPointe billing plans and payments usin
 
 4. Make the CLI executable:
    ```bash
-   chmod +x bin/cardpointe-cli
+   chmod +x bin/fiserv-cli
    ```
 
 ## Configuration
@@ -34,7 +34,7 @@ Shared config lives in `config/global.yaml` and is versioned. It includes API en
 
 ### Profile Configuration (user-specific, not checked in)
 
-Create `~/.cardpointe-cli` (or `config/local.yaml`) with your credentials. CoPilot and CardPointe Gateway use different credentials:
+Create `~/.fiserv-cli` (or `config/local.yaml`) with your credentials. CoPilot and CardPointe Gateway use different credentials:
 
 ```yaml
 profiles:
@@ -70,7 +70,7 @@ CARDCONNECT_TOKEN=your_token_here
 **Profile Selection:**
 - CLI defaults to the first profile in the configuration
 - Use `-p <profileName>` to specify a different profile
-- Example: `./bin/cardpointe-cli merchant.get 123456789012 -p production`
+- Example: `./bin/fiserv-cli merchant.get 123456789012 -p production`
 
 ## Usage
 
@@ -78,14 +78,14 @@ CARDCONNECT_TOKEN=your_token_here
 
 ```bash
 # List all billing plans for a merchant (uses default profile)
-./bin/cardpointe-cli billingplan.list <merchantId>
+./bin/fiserv-cli billingplan.list <merchantId>
 
 # List billing plans using specific profile
-./bin/cardpointe-cli billingplan.list <merchantId> -p <profileName>
+./bin/fiserv-cli billingplan.list <merchantId> -p <profileName>
 
 # Examples
-./bin/cardpointe-cli billingplan.list 123456789012
-./bin/cardpointe-cli billingplan.list 123456789012 -p production
+./bin/fiserv-cli billingplan.list 123456789012
+./bin/fiserv-cli billingplan.list 123456789012 -p production
 ```
 
 ### Export Billing Plans from a CSV
@@ -95,56 +95,57 @@ The file must also include a merchant id column (defaults: `merchant_id`, `merch
 
 ```bash
 # Export billing plan details for each row in input.csv
-./bin/cardpointe-cli billingplan.export input.csv
+./bin/fiserv-cli billingplan.export input.csv
 
 # Or read from stdin (your preferred usage)
-./bin/cardpointe-cli billingplan.export < input.csv
+./bin/fiserv-cli billingplan.export < input.csv
 
 # Limit export to first N rows
-./bin/cardpointe-cli billingplan.export --limit 10 < input.csv
+./bin/fiserv-cli billingplan.export --limit 10 < input.csv
 
 # By default, output is written to stdout. To write a file:
-./bin/cardpointe-cli billingplan.export input.csv -o output.csv
+./bin/fiserv-cli billingplan.export input.csv -o output.csv
 ```
 
 ### Get Payment Profile
 
 ```bash
 # Get profile details from CardPointe Gateway
-./bin/cardpointe-cli profile.get <profileId> <accountId> <merchantId>
+./bin/fiserv-cli profile.get <profileId> <accountId> <merchantId>
 
 # Example
-./bin/cardpointe-cli profile.get 11416055053282854657 166505510 496474011889
-./bin/cardpointe-cli profile.get <profileId> <accountId> <merchantId> -p core-uat
+./bin/fiserv-cli profile.get 11416055053282854657 166505510 496474011889
+./bin/fiserv-cli profile.get <profileId> <accountId> <merchantId> -p core-uat
 ```
 
 ### Get Merchant Information
 
 ```bash
 # Get merchant information (uses default profile)
-./bin/cardpointe-cli merchant.get <merchantId>
+./bin/fiserv-cli merchant.get <merchantId>
 
 # Get merchant information using specific profile
-./bin/cardpointe-cli merchant.get <merchantId> -p <profileName>
+./bin/fiserv-cli merchant.get <merchantId> -p <profileName>
 
 # Examples
-./bin/cardpointe-cli merchant.get 123456789012
-./bin/cardpointe-cli merchant.get 123456789012 -p uat
+./bin/fiserv-cli merchant.get 123456789012
+./bin/fiserv-cli merchant.get 123456789012 -p uat
 ```
 
 ### Cancel a Billing Plan
 
 ```bash
-./bin/cardpointe-cli billingplan.cancel <merchantId> <billingPlanId>
+./bin/fiserv-cli billingplan.cancel <merchantId> <billingPlanId>
 
 # Example
-./bin/cardpointe-cli billingplan.cancel 496180953887 24192607
+./bin/fiserv-cli billingplan.cancel 496180953887 24192607
 ```
 
 ### Available Commands
 
 - `billingplan.list <merchantId>` - List all billing plans for a merchant
 - `profile.get <profileId> <accountId> <merchantId>` - Get payment profile details from CardPointe Gateway
+- `test [testName] [merchantId]` - List or run unit tests; `auth.cardpointe` requires merchantId when used with `-p`
 - `billingplan.get <merchantId> <billingPlanId>` - Get detailed information for a specific billing plan
 - `billingplan.cancel <merchantId> <billingPlanId>` - Cancel a billing plan and all remaining payments
 - `billingplan.export [inputCsv]` - Export billing plan details (reads stdin if inputCsv omitted)
@@ -171,9 +172,9 @@ This tool requires:
 ### Project Structure
 
 ```
-cardpointe-cli/
+fiserv-cli/
 ├── bin/
-│   └── cardpointe-cli     # Main CLI entry point
+│   └── fiserv-cli         # Main CLI entry point
 ├── commands/
 │   └── billingplan.js     # Billing plan commands
 ├── config/
@@ -187,7 +188,7 @@ cardpointe-cli/
 ### Adding New Commands
 
 1. Create a new command file in `commands/`
-2. Import and register the command in `bin/cardpointe-cli`
+2. Import and register the command in `bin/fiserv-cli`
 3. Follow the existing pattern for API calls and output formatting
 
 ## License

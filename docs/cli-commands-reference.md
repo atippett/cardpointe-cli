@@ -59,6 +59,10 @@ console.log(chalk.gray('─'.repeat(40)));
 
 ### Profiles
 - ✅ `profile.get <profileId> <accountId> <merchantId>` - Get payment profile from CardPointe Gateway
+
+### Testing
+- ✅ `test auth.cardpointe <merchantId>` - Test CardPointe Gateway credentials (requires `-p <profile>` and merchantId for live test)
+- ✅ `test auth.copilot` - Test CoPilot authentication
 - 🔄 `profile.list <merchantId>` - List payment profiles
 - 🔄 `profile.create` - Create new profile
 

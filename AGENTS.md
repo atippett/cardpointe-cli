@@ -25,8 +25,8 @@ CardPointe CLI tool for managing billing plans and payments. Uses two APIs:
 ## Setup
 
 - Install: `npm install`
-- Config: `~/.cardpointe-cli` or `config/local.yaml` (see `config/local.example.yaml`)
-- Run: `./bin/cardpointe-cli` or `node bin/cardpointe-cli`
+- Config: `~/.fiserv-cli` or `config/local.yaml` (see `config/local.example.yaml`)
+- Run: `./bin/fiserv-cli` or `node bin/fiserv-cli`
 
 ## Config Format
 

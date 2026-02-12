@@ -7,7 +7,7 @@ jest.mock('fs');
 jest.mock('path');
 
 describe('Configuration Loading', () => {
-  const mockConfigPath = '/mock/config/path/.cardpointe-cli';
+  const mockConfigPath = '/mock/config/path/.fiserv-cli';
   const mockConfigContent = `profilename: "test"
 sitename: "test-site"
 username: "test-user"
@@ -30,7 +30,7 @@ apiVersion: "1.0"`;
     
     // Mock path.join to return our test config path
     path.join.mockImplementation((...args) => {
-      if (args.includes('.cardpointe-cli')) {
+      if (args.includes('.fiserv-cli') || args.includes('.cardpointe-cli')) {
         return mockConfigPath;
       }
       return args.join('/');
