@@ -30,11 +30,11 @@ A command-line interface for managing CardPointe billing plans and payments usin
 
 ### Global Configuration (checked in)
 
-Shared config lives in `config/global.yaml` and is versioned. It includes API endpoints, token URLs, and command overrides.
+Shared config lives in `config-global.yaml` and is versioned. It includes API endpoints, token URLs, and command overrides.
 
 ### Profile Configuration (user-specific, not checked in)
 
-Create `~/.fiserv-cli` (or `config/local.yaml`) with your credentials. CoPilot and CardPointe Gateway use different credentials:
+Create `~/.fiserv-cli` (or `config-local.yaml`) with your credentials. CoPilot and CardPointe Gateway use different credentials:
 
 ```yaml
 profiles:
@@ -53,7 +53,7 @@ profiles:
 
 Old format (flat) is still supported: use `username`/`password` for CoPilot and optionally `cardpointe_username`/`cardpointe_password` for Gateway.
 
-Profile config is merged with `config/global.yaml`. User profiles override global defaults.
+Profile config is merged with `config-global.yaml`. User profiles override global defaults.
 
 ### Environment Variables
 
@@ -177,9 +177,8 @@ fiserv-cli/
 │   └── fiserv-cli         # Main CLI entry point
 ├── commands/
 │   └── billingplan.js     # Billing plan commands
-├── config/
-│   ├── global.yaml        # Shared config (checked in)
-│   └── local.example.yaml
+├── config-global.yaml      # Shared config (checked in)
+├── config-local.yaml-example   # Template for local credentials
 ├── lib/                   # Utility libraries
 ├── package.json
 └── README.md

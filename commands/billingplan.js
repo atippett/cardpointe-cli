@@ -53,7 +53,7 @@ async function ensureAuthenticatedOrExit(api, spinner, config) {
     console.error(chalk.red('Error: Authentication failed'));
     console.log(chalk.yellow('Please ensure you have either:'));
     console.log(chalk.gray('1. CARDCONNECT_TOKEN environment variable set, or'));
-    console.log(chalk.gray('2. username and password configured in ~/.fiserv-cli or config/local.yaml'));
+    console.log(chalk.gray('2. username and password configured in ~/.fiserv-cli or config-local.yaml'));
     console.log(chalk.gray('\nDebug info:'));
     console.log(chalk.gray('- Environment:'), config.production ? chalk.red('PRODUCTION') : chalk.yellow('UAT'));
     console.log(chalk.gray('- API Base URL:'), api.baseURL);

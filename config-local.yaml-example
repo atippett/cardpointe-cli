@@ -1,5 +1,5 @@
-# Copy to config/local.yaml and add your credentials
-# config/local.yaml is gitignored
+# Copy to config-local.yaml and add your credentials
+# config-local.yaml is gitignored
 #
 # New format (recommended): separate copilot and cardpointe credentials
 profiles:

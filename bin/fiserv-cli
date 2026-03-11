@@ -33,7 +33,7 @@ function getFirstProfileName(profiles) {
 
 function resolveConfigPath() {
   const homePath = path.join(os.homedir(), '.fiserv-cli');
-  const legacyPath = path.join(__dirname, '../config/local.yaml');
+  const legacyPath = path.join(__dirname, '../config-local.yaml');
   const legacyHome = path.join(os.homedir(), '.cardpointe-cli');
   if (fs.existsSync(homePath)) return homePath;
   if (fs.existsSync(legacyHome)) return legacyHome;
@@ -45,7 +45,7 @@ function ensureConfigFilePermissions() {
   const paths = [
     path.join(os.homedir(), '.fiserv-cli'),
     path.join(os.homedir(), '.cardpointe-cli'),
-    path.join(__dirname, '../config/local.yaml')
+    path.join(__dirname, '../config-local.yaml')
   ];
   for (const configPath of paths) {
     try {
@@ -59,7 +59,7 @@ function ensureConfigFilePermissions() {
   }
 }
 
-const GLOBAL_CONFIG_PATH = path.join(__dirname, '../config/global.yaml');
+const GLOBAL_CONFIG_PATH = path.join(__dirname, '../config-global.yaml');
 
 function loadGlobalConfig() {
   try {

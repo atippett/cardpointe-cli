@@ -13,19 +13,19 @@ CardPointe CLI tool for managing billing plans and payments. Uses two APIs:
 | Change type | Update these files |
 |-------------|--------------------|
 | New commands | `README.md` (Usage, Available Commands), `docs/cli-commands-reference.md` |
-| Config format or options | `README.md` (Configuration), `config/local.example.yaml` |
-| New profiles or env vars | `README.md`, `config/local.example.yaml` |
+| Config format or options | `README.md` (Configuration), `config-local.yaml-example` |
+| New profiles or env vars | `README.md`, `config-local.yaml-example` |
 | API or behavior changes | `README.md`, `docs/api-reference.md` or `docs/cli-commands-reference.md` |
 
 **Checklist after edits:**
 - [ ] README.md reflects new usage, config, or commands
-- [ ] config/local.example.yaml has current format if config changed
+- [ ] config-local.yaml-example has current format if config changed
 - [ ] docs/cli-commands-reference.md lists new/updated commands
 
 ## Setup
 
 - Install: `npm install`
-- Config: `~/.fiserv-cli` or `config/local.yaml` (see `config/local.example.yaml`)
+- Config: `~/.fiserv-cli` or `config-local.yaml` (see `config-local.yaml-example`)
 - Run: `./bin/fiserv-cli` or `node bin/fiserv-cli`
 
 ## Config Format

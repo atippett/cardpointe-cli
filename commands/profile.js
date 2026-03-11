@@ -29,7 +29,7 @@ async function getProfile(profileId, accountId, merchantId, options, config) {
     const password = process.env.CARDCONNECT_GATEWAY_PASSWORD || config.cardpointe_password || config.password;
     if (!username || !password) {
       spinner.fail('No username/password available');
-      throw new Error('Configure cardpointe.username/password (or username/password) in ~/.fiserv-cli or config/local.yaml');
+      throw new Error('Configure cardpointe.username/password (or username/password) in ~/.fiserv-cli or config-local.yaml');
     }
 
     const endpointPath = `profile/${encodeURIComponent(profileId)}/${encodeURIComponent(accountId)}/${encodeURIComponent(merchantId)}`;
@@ -71,7 +71,7 @@ async function testCardPointeCredentials(config, merchId = '496082673888') {
   const username = process.env.CARDCONNECT_GATEWAY_USERNAME || config.cardpointe_username || config.username;
   const password = process.env.CARDCONNECT_GATEWAY_PASSWORD || config.cardpointe_password || config.password;
   if (!username || !password) {
-    throw new Error('Configure cardpointe.username/password in ~/.fiserv-cli or config/local.yaml');
+    throw new Error('Configure cardpointe.username/password in ~/.fiserv-cli or config-local.yaml');
   }
   const headers = {
     'Content-Type': 'application/json',

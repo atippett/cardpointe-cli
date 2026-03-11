@@ -1,5 +1,5 @@
 # CardPointe CLI Global Configuration (checked in)
-# User-specific profiles live in ~/.fiserv-cli or config/local.yaml
+# User-specific profiles live in ~/.fiserv-cli or config-local.yaml
 
 global:
   production:
