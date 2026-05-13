@@ -53,7 +53,8 @@ console.log(chalk.gray('─'.repeat(40)));
 ### Billing Plans
 - ✅ `billingplan.list <merchantId>` - List all billing plans
 - ✅ `billingplan.get <merchantId> <billingPlanId>` - Get specific billing plan
-- ✅ `billingplan.cancel <merchantId> <billingPlanId>` - Cancel billing plan and all remaining payments
+- ✅ `billingplan.cancel <merchantId> <billingPlanId>` - Cancel a billing plan and all remaining payments
+- ✅ `billingplan.cancel --input <csv>` - Batch cancel from CSV (use `-` for stdin). Supports `--dry-run`, `-y/--yes`, `--limit N`, `--concurrency N` (default 10), `--plan-id-column`, `--merchant-id-column`. Plan ID column auto-detects `billingPlanId`/`planId`/`id`; merchant ID auto-detects `merchant_id`/`merchantId`/`merchId`/`mid`/`location`.
 - ✅ `billingplan.export [inputCsv]` - Export billing plan details (reads stdin if inputCsv omitted)
 - 🔄 `billingplan.create` - Create new billing plan
 

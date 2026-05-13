@@ -135,11 +135,43 @@ The file must also include a merchant id column (defaults: `merchant_id`, `merch
 ### Cancel a Billing Plan
 
 ```bash
+# Single plan
 ./bin/fiserv-cli billingplan.cancel <merchantId> <billingPlanId>
 
 # Example
 ./bin/fiserv-cli billingplan.cancel 496180953887 24192607
 ```
+
+#### Batch cancel from CSV
+
+Pass `--input <csv>` (or `-` for stdin) to cancel many plans at once. The CSV must have a header row; the plan-id column matches `billingPlanId`, `planId`, `id` (or variants like `Plan Id`), and the merchant-id column matches `merchant_id`, `merchantId`, `merchId`, `mid`, or `Location`. Override with `--plan-id-column` / `--merchant-id-column` if your headers differ.
+
+```bash
+# Preview only — prints what would be cancelled, no API calls
+./bin/fiserv-cli billingplan.cancel -p barksuds --input ~/plans.csv --dry-run
+
+# Run for real (interactive confirmation required)
+./bin/fiserv-cli billingplan.cancel -p barksuds --input ~/plans.csv
+
+# Skip the confirmation prompt
+./bin/fiserv-cli billingplan.cancel -p barksuds --input ~/plans.csv --yes
+
+# Try a small batch first
+./bin/fiserv-cli billingplan.cancel -p barksuds --input ~/plans.csv --limit 5 --yes
+
+# Read from stdin (requires --yes since stdin is the CSV, not a TTY)
+cat plans.csv | ./bin/fiserv-cli billingplan.cancel -p barksuds --input - --yes
+```
+
+Options:
+- `-i, --input <csv>` — CSV path (or `-` for stdin)
+- `-y, --yes` — skip confirmation prompt
+- `--dry-run` — preview without calling the API
+- `--limit <n>` — process only the first N rows
+- `--concurrency <n>` — parallel cancels (default `10`)
+- `--plan-id-column <name>` / `--merchant-id-column <name>` — header overrides
+
+Cancels run in parallel with a live progress indicator (`Cancelling 42/446 (ok: 41, failed: 1)`). The batch continues past per-row failures; a summary of any failures prints at the end.
 
 ### Available Commands
 
@@ -147,7 +179,7 @@ The file must also include a merchant id column (defaults: `merchant_id`, `merch
 - `profile.get <profileId> <accountId> <merchantId>` - Get payment profile details from CardPointe Gateway
 - `test [testName] [merchantId]` - List or run unit tests; `auth.cardpointe` requires merchantId when used with `-p`
 - `billingplan.get <merchantId> <billingPlanId>` - Get detailed information for a specific billing plan
-- `billingplan.cancel <merchantId> <billingPlanId>` - Cancel a billing plan and all remaining payments
+- `billingplan.cancel <merchantId> <billingPlanId>` - Cancel a single billing plan (or use `--input <csv>` for batch cancel)
 - `billingplan.export [inputCsv]` - Export billing plan details (reads stdin if inputCsv omitted)
 - `merchant.get <merchantId>` - Get merchant information
 
