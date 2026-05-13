@@ -314,15 +314,30 @@ const getCmd = program
 getCmd.api = 'copilot';
 
 const cancelCmd = program
-  .command('billingplan.cancel <merchantId> <billingPlanId>')
-  .description('Cancel a billing plan and all remaining payments')
+  .command('billingplan.cancel [merchantId] [billingPlanId]')
+  .description('Cancel a billing plan (or a batch via --input <csv>)')
   .option('-p, --profile <name>', 'Configuration profile to use')
+  .option('-i, --input <csv>', 'CSV file with plans to cancel (use "-" for stdin)')
+  .option('-y, --yes', 'Skip confirmation prompt (batch mode)')
+  .option('--dry-run', 'Print what would be cancelled, make no API calls (batch mode)')
+  .option('--limit <number>', 'Limit batch to first N rows')
+  .option('--concurrency <number>', 'Parallel cancel workers (batch mode)', '10')
+  .option('--plan-id-column <name>', 'Plan ID column header (batch mode)')
+  .option('--merchant-id-column <name>', 'Merchant ID column header (batch mode)')
   .option('-v, --verbose', 'Enable verbose debug output')
   .action(async (merchantId, billingPlanId, options) => {
     try {
       const profileName = getProfileNameFromOptions(options);
       const activeConfig = profileName ? loadConfigWithProfile(profileName) : config;
-      await billingPlanCommands.cancelBillingPlan(merchantId, billingPlanId, options, activeConfig);
+      if (options.input) {
+        const csvPath = options.input === '-' ? null : options.input;
+        await billingPlanCommands.cancelBillingPlansFromCsv(csvPath, options, activeConfig);
+      } else {
+        if (!merchantId || !billingPlanId) {
+          throw new Error('merchantId and billingPlanId are required (or pass --input <csv>)');
+        }
+        await billingPlanCommands.cancelBillingPlan(merchantId, billingPlanId, options, activeConfig);
+      }
     } catch (err) {
       console.error(chalk.red('Error:'), err.message);
       process.exit(1);

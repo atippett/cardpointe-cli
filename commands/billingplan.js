@@ -5,7 +5,12 @@ const formatters = require('../lib/formatters');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const { parseCsv, stringifyCsv } = require('../lib/csv');
+const {
+  parseCsv,
+  stringifyCsv,
+  findPlanIdColumnIndex,
+  findMerchantIdColumnIndex
+} = require('../lib/csv');
 
 // Helper function to apply command-specific configuration
 function applyCommandConfig(config, commandName) {
@@ -133,50 +138,29 @@ async function fetchProfileData(config, profileId, accountId, merchId, verbose =
   return response.data;
 }
 
-function normalizeHeaderName(name) {
-  // Normalize headers so variants like "Plan Id", "plan_id", "planId" all match
-  // by stripping non-alphanumeric characters.
-  return String(name ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '');
+async function runWithConcurrency(items, limit, worker) {
+  let cursor = 0;
+  const runOne = async () => {
+    while (cursor < items.length) {
+      const i = cursor++;
+      await worker(items[i], i);
+    }
+  };
+  const pool = Array.from({ length: Math.min(limit, items.length) }, runOne);
+  await Promise.all(pool);
 }
 
-function findPlanIdColumnIndex(headers, explicitName) {
-  const normalized = headers.map(normalizeHeaderName);
-
-  if (explicitName) {
-    const idx = normalized.indexOf(normalizeHeaderName(explicitName));
-    if (idx !== -1) return idx;
-  }
-
-  const candidates = ['billingplanid', 'planid', 'id'];
-
-  for (const candidate of candidates) {
-    const idx = normalized.indexOf(candidate);
-    if (idx !== -1) return idx;
-  }
-
-  return -1;
-}
-
-function findMerchantIdColumnIndex(headers, explicitName) {
-  const normalized = headers.map(normalizeHeaderName);
-
-  if (explicitName) {
-    const idx = normalized.indexOf(normalizeHeaderName(explicitName));
-    if (idx !== -1) return idx;
-  }
-
-  // Some exports store merchant id under "Location" (as seen in CoPilot UI exports)
-  const candidates = ['merchantid', 'merchid', 'mid', 'location'];
-
-  for (const candidate of candidates) {
-    const idx = normalized.indexOf(candidate);
-    if (idx !== -1) return idx;
-  }
-
-  return -1;
+function promptYes(question) {
+  return new Promise((resolve) => {
+    const readline = require('readline').createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+    readline.question(question, (answer) => {
+      readline.close();
+      resolve(String(answer || '').trim().toLowerCase());
+    });
+  });
 }
 
 function flattenForCsv(value, prefix, out) {
@@ -375,6 +359,132 @@ const billingPlanCommands = {
     } catch (error) {
       spinner.fail('Failed to cancel billing plan');
       throw error;
+    }
+  },
+
+  async cancelBillingPlansFromCsv(inputCsvPath, options, config) {
+    const isStdin = !inputCsvPath || inputCsvPath === '-';
+    const inputText = isStdin
+      ? fs.readFileSync(0, 'utf8')
+      : fs.readFileSync(inputCsvPath, 'utf8');
+
+    const parsed = parseCsv(inputText);
+    if (parsed.length < 2) {
+      throw new Error('Input CSV must include a header row and at least one data row');
+    }
+
+    const headers = parsed[0].map((h) => String(h ?? '').trim());
+    const planIdIdx = findPlanIdColumnIndex(headers, options.planIdColumn);
+    if (planIdIdx === -1) {
+      throw new Error(
+        'Could not find a plan id column in input CSV. ' +
+        'Tried: billingPlanId, planId, id (matches variants like "Plan Id"). ' +
+        'Use --plan-id-column to specify the correct header.'
+      );
+    }
+    const merchantIdIdx = findMerchantIdColumnIndex(headers, options.merchantIdColumn);
+    if (merchantIdIdx === -1) {
+      throw new Error(
+        'Could not find a merchant id column in input CSV. ' +
+        'Tried: merchant_id, merchantId, merchId, mid, location. ' +
+        'Use --merchant-id-column to specify the correct header.'
+      );
+    }
+
+    const limit = options.limit === undefined || options.limit === null || options.limit === ''
+      ? null
+      : Number.parseInt(String(options.limit), 10);
+    if (limit !== null && (Number.isNaN(limit) || limit < 0)) {
+      throw new Error('--limit must be a non-negative integer');
+    }
+
+    const concurrency = Math.max(1, Number.parseInt(String(options.concurrency ?? '10'), 10));
+    if (Number.isNaN(concurrency)) {
+      throw new Error('--concurrency must be a positive integer');
+    }
+
+    const rows = (limit === null ? parsed.slice(1) : parsed.slice(1, 1 + limit))
+      .map((row) => ({
+        merchantId: String(row[merchantIdIdx] ?? '').trim(),
+        billingPlanId: String(row[planIdIdx] ?? '').trim()
+      }))
+      .filter((r) => r.merchantId && r.billingPlanId);
+
+    if (rows.length === 0) {
+      console.log(chalk.yellow('No rows with both merchantId and billingPlanId — nothing to do.'));
+      return;
+    }
+
+    const envLabel = config.production ? chalk.red.bold('PRODUCTION') : chalk.yellow('UAT');
+    console.log();
+    console.log(chalk.cyan('Batch cancel:'));
+    console.log(chalk.gray('  Environment:'), envLabel);
+    console.log(chalk.gray('  Source:'), isStdin ? '<stdin>' : inputCsvPath);
+    console.log(chalk.gray('  Plans to cancel:'), chalk.bold(rows.length));
+    console.log(chalk.gray('  Concurrency:'), concurrency);
+    const sample = rows.slice(0, 3).concat(rows.length > 6 ? [{ merchantId: '...', billingPlanId: '...' }] : []).concat(rows.length > 3 ? rows.slice(-Math.min(3, rows.length - 3)) : []);
+    console.log(chalk.gray('  Sample:'));
+    for (const r of sample) {
+      console.log(chalk.gray(`    merch=${r.merchantId} plan=${r.billingPlanId}`));
+    }
+    console.log();
+
+    if (options.dryRun) {
+      console.log(chalk.green(`[dry-run] Would cancel ${rows.length} billing plan(s). No API calls made.`));
+      return;
+    }
+
+    if (!options.yes) {
+      if (isStdin || !process.stdin.isTTY) {
+        throw new Error('Confirmation required but stdin is not a TTY. Re-run with --yes to skip the prompt.');
+      }
+      const answer = await promptYes(`Type "yes" to cancel ${rows.length} plan(s) in ${config.production ? 'PRODUCTION' : 'UAT'}: `);
+      if (answer !== 'yes') {
+        console.log(chalk.yellow('Aborted.'));
+        return;
+      }
+    }
+
+    const configToUse = applyCommandConfig(config, 'billingplan');
+    const api = new CardPointeAPI(configToUse, options.verbose);
+    await ensureAuthenticatedOrExit(api, null, config);
+    // Prime the token cache so parallel workers don't all race to authenticate.
+    await api.getToken();
+
+    const spinner = ora(`Cancelling 0/${rows.length} (ok: 0, failed: 0)`).start();
+
+    let completed = 0;
+    let succeeded = 0;
+    let failed = 0;
+    const failures = [];
+
+    const worker = async (item) => {
+      try {
+        await api.request('POST', '/billingplan/cancel', {
+          merchId: item.merchantId,
+          billingPlanId: item.billingPlanId
+        });
+        succeeded++;
+      } catch (err) {
+        failed++;
+        failures.push({ ...item, error: err.message });
+      } finally {
+        completed++;
+        spinner.text = `Cancelling ${completed}/${rows.length} (ok: ${succeeded}, failed: ${failed})`;
+      }
+    };
+
+    await runWithConcurrency(rows, concurrency, worker);
+
+    if (failed === 0) {
+      spinner.succeed(chalk.green(`Cancelled ${succeeded}/${rows.length} billing plan(s)`));
+    } else {
+      spinner.warn(chalk.yellow(`Cancelled ${succeeded}/${rows.length} — ${failed} failed`));
+      console.error(chalk.red('\nFailures:'));
+      for (const f of failures) {
+        console.error(chalk.gray(`  merch=${f.merchantId} plan=${f.billingPlanId}`), chalk.red(f.error));
+      }
+      process.exitCode = 1;
     }
   },
 
