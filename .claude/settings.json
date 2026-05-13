@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "out=$(git status --porcelain 2>/dev/null); echo \"$out\" | grep -qE '^.. (bin|commands|lib)/' || exit 0; echo \"$out\" | grep -qE '^.. (README\\.md|docs/cli-commands-reference\\.md|config-local\\.yaml-example)' && exit 0; jq -n '{systemMessage:\"📋 Doc-sync reminder: code in bin/commands/lib changed but no doc files modified. Per AGENTS.md → Documentation Maintenance table, review README.md, docs/cli-commands-reference.md, and config-local.yaml-example.\"}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
