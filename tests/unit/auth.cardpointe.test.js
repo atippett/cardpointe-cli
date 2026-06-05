@@ -5,10 +5,10 @@ const { testCardPointeCredentials, getCardPointeRestBaseUrl } = require('../../c
 describe('auth.cardpointe', () => {
   let mockAxios;
 
-  const baseUrl = 'https://daysmart-uat.cardconnect.com/cardconnect/rest/';
+  const baseUrl = 'https://testsite-uat.cardconnect.com/cardconnect/rest/';
   const testConfig = {
     production: false,
-    sitename: 'daysmart',
+    sitename: 'testsite',
     cardpointe_username: 'test-gateway-user',
     cardpointe_password: 'test-gateway-pass',
     global: {

@@ -6,10 +6,10 @@ describe('card.bin', () => {
   let mockAxios;
   let logSpy;
 
-  const baseUrl = 'https://daysmart-uat.cardconnect.com/cardconnect/rest/';
+  const baseUrl = 'https://testsite-uat.cardconnect.com/cardconnect/rest/';
   const testConfig = {
     production: false,
-    sitename: 'daysmart',
+    sitename: 'testsite',
     merchid: '496082673888',
     cardpointe_username: 'test-gateway-user',
     cardpointe_password: 'test-gateway-pass',
