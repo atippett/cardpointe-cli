@@ -74,11 +74,14 @@ async function testCardPointeCredentials(config, merchId = '496082673888') {
     throw new Error('Configure cardpointe.username/password in ~/.fiserv-cli or config-local.yaml');
   }
   const headers = {
-    'Content-Type': 'application/json',
     Accept: 'application/json',
     Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`
   };
-  const response = await require('axios').put(base, { merchid: merchId }, { headers });
+  // Validate credentials against a real, read-only gateway endpoint. A PUT to the
+  // bare REST root returns 406 even with valid creds; inquireMerchant returns 200
+  // when both the credentials and the merchant are valid (401 if creds are wrong).
+  const url = `${base}inquireMerchant/${encodeURIComponent(merchId)}`;
+  const response = await require('axios').get(url, { headers });
   return response;
 }
 

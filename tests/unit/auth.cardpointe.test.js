@@ -33,28 +33,25 @@ describe('auth.cardpointe', () => {
     expect(url).toBe(baseUrl);
   });
 
-  test('sends PUT with Basic Auth to test credentials', async () => {
-    mockAxios.onPut(baseUrl).reply((config) => {
-      const body = JSON.parse(config.data || '{}');
-      return body.merchid ? [200, 'CardConnect REST Servlet'] : [400, 'Bad request'];
-    });
+  test('sends GET to inquireMerchant with Basic Auth to test credentials', async () => {
+    mockAxios.onGet(`${baseUrl}inquireMerchant/496082673888`).reply(200, { site: 'testsite', enabled: 'Y' });
 
     const response = await testCardPointeCredentials(testConfig);
     expect(response.status).toBe(200);
 
-    expect(mockAxios.history.put).toHaveLength(1);
-    const req = mockAxios.history.put[0];
+    expect(mockAxios.history.get).toHaveLength(1);
+    const req = mockAxios.history.get[0];
+    expect(req.url).toBe(`${baseUrl}inquireMerchant/496082673888`);
     expect(req.headers.Authorization).toMatch(/^Basic /);
     const decoded = Buffer.from(req.headers.Authorization.replace('Basic ', ''), 'base64').toString();
     expect(decoded).toBe('test-gateway-user:test-gateway-pass');
-    expect(JSON.parse(req.data)).toEqual({ merchid: '496082673888' });
   });
 
   test('uses custom merchid when provided', async () => {
-    mockAxios.onPut(baseUrl).reply(200, 'OK');
+    mockAxios.onGet(`${baseUrl}inquireMerchant/123456789012`).reply(200, { enabled: 'Y' });
 
     await testCardPointeCredentials(testConfig, '123456789012');
-    expect(mockAxios.history.put[0].data).toContain('123456789012');
+    expect(mockAxios.history.get[0].url).toBe(`${baseUrl}inquireMerchant/123456789012`);
   });
 
   test('falls back to username/password when cardpointe_* not set', async () => {
@@ -65,11 +62,11 @@ describe('auth.cardpointe', () => {
       username: 'legacy-user',
       password: 'legacy-pass'
     };
-    mockAxios.onPut(baseUrl).reply(200, 'OK');
+    mockAxios.onGet(/inquireMerchant/).reply(200, { enabled: 'Y' });
 
     await testCardPointeCredentials(legacyConfig);
     const decoded = Buffer.from(
-      mockAxios.history.put[0].headers.Authorization.replace('Basic ', ''),
+      mockAxios.history.get[0].headers.Authorization.replace('Basic ', ''),
       'base64'
     ).toString();
     expect(decoded).toBe('legacy-user:legacy-pass');
@@ -78,7 +75,7 @@ describe('auth.cardpointe', () => {
   test('throws when credentials missing', async () => {
     const noCreds = { ...testConfig, cardpointe_username: undefined, cardpointe_password: undefined, username: undefined, password: undefined };
     await expect(testCardPointeCredentials(noCreds)).rejects.toThrow(/Configure cardpointe/);
-    expect(mockAxios.history.put).toHaveLength(0);
+    expect(mockAxios.history.get).toHaveLength(0);
   });
 
   test('throws when cardpointe_api_url not configured', async () => {
