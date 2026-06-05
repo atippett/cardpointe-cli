@@ -83,10 +83,19 @@ CARDCONNECT_TOKEN=your_token_here
 # List billing plans using specific profile
 ./bin/fiserv-cli billingplan.list <merchantId> -p <profileName>
 
+# Filter by plan status (client-side): active/cancelled/finished or A/C/F
+./bin/fiserv-cli billingplan.list <merchantId> --status active
+
 # Examples
 ./bin/fiserv-cli billingplan.list 123456789012
 ./bin/fiserv-cli billingplan.list 123456789012 -p production
+./bin/fiserv-cli billingplan.list 123456789012 --status cancelled -f csv
 ```
+
+> **Note:** The CoPilot `/billingplan/list` endpoint accepts no query parameters
+> and returns at most **1000 plans** (newest first). `--status` filters that
+> returned set client-side; it cannot retrieve plans older than the most recent
+> 1000. When the cap is hit the command prints a warning.
 
 ### Export Billing Plans from a CSV
 
@@ -118,6 +127,36 @@ The file must also include a merchant id column (defaults: `merchant_id`, `merch
 ./bin/fiserv-cli profile.get <profileId> <accountId> <merchantId> -p core-uat
 ```
 
+### Inquire a Transaction
+
+```bash
+# Retrieve details for a prior transaction (merchid comes from the resolved profile)
+./bin/fiserv-cli transaction.inquire <retref>
+
+# Example
+./bin/fiserv-cli transaction.inquire 123456789012 -p core-uat
+```
+
+### Settlement Batch Status
+
+```bash
+# Settlement status for the resolved merchant (date optional)
+./bin/fiserv-cli transaction.settlestat
+
+# Filter by settlement date (MMDD)
+./bin/fiserv-cli transaction.settlestat --date 0102 -p core-uat
+```
+
+### BIN / Card-Issuer Lookup
+
+```bash
+# Look up issuer details for a BIN (merchid comes from the resolved profile)
+./bin/fiserv-cli card.bin <bin>
+
+# Example
+./bin/fiserv-cli card.bin 411111 -p core-uat
+```
+
 ### Get Merchant Information
 
 ```bash
@@ -146,6 +185,8 @@ The file must also include a merchant id column (defaults: `merchant_id`, `merch
 
 Pass `--input <csv>` (or `-` for stdin) to cancel many plans at once. The CSV must have a header row; the plan-id column matches `billingPlanId`, `planId`, `id` (or variants like `Plan Id`), and the merchant-id column matches `merchant_id`, `merchantId`, `merchId`, `mid`, or `Location`. Override with `--plan-id-column` / `--merchant-id-column` if your headers differ.
 
+If all plans belong to one merchant, supply a `merchantId` argument alongside `--input`: it is applied to **every** row and any merchant-id column in the CSV is ignored, so the CSV only needs plan IDs.
+
 ```bash
 # Preview only — prints what would be cancelled, no API calls
 ./bin/fiserv-cli billingplan.cancel -p barksuds --input ~/plans.csv --dry-run
@@ -158,6 +199,9 @@ Pass `--input <csv>` (or `-` for stdin) to cancel many plans at once. The CSV mu
 
 # Try a small batch first
 ./bin/fiserv-cli billingplan.cancel -p barksuds --input ~/plans.csv --limit 5 --yes
+
+# Plan-ID-only CSV: apply one merchant to every row (CSV merchant column, if any, is ignored)
+./bin/fiserv-cli billingplan.cancel -p barksuds 496180953887 --input ~/plan-ids.csv --dry-run
 
 # Read from stdin (requires --yes since stdin is the CSV, not a TTY)
 cat plans.csv | ./bin/fiserv-cli billingplan.cancel -p barksuds --input - --yes
@@ -177,6 +221,9 @@ Cancels run in parallel with a live progress indicator (`Cancelling 42/446 (ok: 
 
 - `billingplan.list <merchantId>` - List all billing plans for a merchant
 - `profile.get <profileId> <accountId> <merchantId>` - Get payment profile details from CardPointe Gateway
+- `transaction.inquire <retref>` - Retrieve details for a prior transaction from CardPointe Gateway
+- `transaction.settlestat [--date <MMDD>]` - Get settlement batch status from CardPointe Gateway
+- `card.bin <bin>` - Look up BIN / card-issuer details from CardPointe Gateway
 - `test [testName] [merchantId]` - List or run unit tests; `auth.cardpointe` requires merchantId when used with `-p`
 - `billingplan.get <merchantId> <billingPlanId>` - Get detailed information for a specific billing plan
 - `billingplan.cancel <merchantId> <billingPlanId>` - Cancel a single billing plan (or use `--input <csv>` for batch cancel)

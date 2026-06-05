@@ -51,15 +51,18 @@ console.log(chalk.gray('─'.repeat(40)));
 ## Planned Commands
 
 ### Billing Plans
-- ✅ `billingplan.list <merchantId>` - List all billing plans
+- ✅ `billingplan.list <merchantId>` - List all billing plans. Supports `--status <active|cancelled|finished|A|C|F>` for client-side filtering. The API takes no query params and caps results at 1000 (newest first); `--status` filters that set and cannot reach older plans (a warning prints when the 1000 cap is hit).
 - ✅ `billingplan.get <merchantId> <billingPlanId>` - Get specific billing plan
 - ✅ `billingplan.cancel <merchantId> <billingPlanId>` - Cancel a billing plan and all remaining payments
-- ✅ `billingplan.cancel --input <csv>` - Batch cancel from CSV (use `-` for stdin). Supports `--dry-run`, `-y/--yes`, `--limit N`, `--concurrency N` (default 10), `--plan-id-column`, `--merchant-id-column`. Plan ID column auto-detects `billingPlanId`/`planId`/`id`; merchant ID auto-detects `merchant_id`/`merchantId`/`merchId`/`mid`/`location`.
+- ✅ `billingplan.cancel [merchantId] --input <csv>` - Batch cancel from CSV (use `-` for stdin). Supports `--dry-run`, `-y/--yes`, `--limit N`, `--concurrency N` (default 10), `--plan-id-column`, `--merchant-id-column`. Plan ID column auto-detects `billingPlanId`/`planId`/`id`; merchant ID auto-detects `merchant_id`/`merchantId`/`merchId`/`mid`/`location`. Supplying a `merchantId` argument with `--input` applies that merchant to every row and ignores any CSV merchant column (CSV then needs only plan IDs).
 - ✅ `billingplan.export [inputCsv]` - Export billing plan details (reads stdin if inputCsv omitted)
 - 🔄 `billingplan.create` - Create new billing plan
 
 ### Profiles
 - ✅ `profile.get <profileId> <accountId> <merchantId>` - Get payment profile from CardPointe Gateway
+
+### Cards
+- ✅ `card.bin <bin>` - Look up BIN / card-issuer details from CardPointe Gateway (merchid from resolved profile)
 
 ### Testing
 - ✅ `test auth.cardpointe <merchantId>` - Test CardPointe Gateway credentials (requires `-p <profile>` and merchantId for live test)
@@ -68,6 +71,8 @@ console.log(chalk.gray('─'.repeat(40)));
 - 🔄 `profile.create` - Create new profile
 
 ### Transactions
+- ✅ `transaction.inquire <retref>` - Retrieve details for a prior transaction (merchid from resolved profile)
+- ✅ `transaction.settlestat [--date <MMDD>]` - Get settlement batch status (merchid from resolved profile; date optional)
 - 🔄 `transaction.auth` - Authorize transaction
 - 🔄 `transaction.capture <retref>` - Capture transaction
 - 🔄 `transaction.void <retref>` - Void transaction

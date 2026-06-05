@@ -9,7 +9,7 @@ describe('auth.copilot', () => {
   const tokenEndpointUat = 'https://accountsuat.cardconnect.com/auth/realms/cardconnect/protocol/openid-connect/token';
   const testConfig = {
     production: false,
-    sitename: 'daysmart-uat',
+    sitename: 'testsite-uat',
     username: 'test-user',
     password: 'test-password',
     client_id: 'test-client',

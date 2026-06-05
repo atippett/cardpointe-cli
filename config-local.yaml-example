@@ -6,6 +6,10 @@ profiles:
   default:
     production: false
     sitename: "cardpointe-uat"
+    # merchid is optional; used by gateway commands that take it from config
+    # (transaction.inquire, transaction.settlestat, card.bin). Can also be set
+    # via the CARDCONNECT_MERCHID env var.
+    # merchid: "496474011889"
     copilot:
       username: "your-copilot-username"
       password: "your-copilot-password"
