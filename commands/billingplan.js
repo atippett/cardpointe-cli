@@ -12,6 +12,19 @@ const {
   findMerchantIdColumnIndex
 } = require('../lib/csv');
 
+// Normalize a user-supplied plan status to the API's single-letter code.
+// Accepts friendly names (active/cancelled/finished) or raw codes (A/C/F).
+function normalizePlanStatus(input) {
+  if (!input) return null;
+  const v = String(input).trim().toLowerCase();
+  const map = {
+    a: 'A', active: 'A',
+    c: 'C', cancelled: 'C', canceled: 'C',
+    f: 'F', finished: 'F'
+  };
+  return map[v] || null;
+}
+
 // Helper function to apply command-specific configuration
 function applyCommandConfig(config, commandName) {
   let configToUse = { ...config };
@@ -217,43 +230,44 @@ const billingPlanCommands = {
       
       // Test authentication before making the request
       await ensureAuthenticatedOrExit(api, spinner, config);
-      // Build endpoint with optional pagination parameters
-      let endpoint = `/billingplan/list/${merchantId}`;
-      
-      // Add pagination parameters if specified
-      const paginationParams = [];
-      if (options.pageNumber) {
-        paginationParams.push(`pageNumber=${options.pageNumber}`);
-      }
-      if (options.page) {
-        paginationParams.push(`page=${options.page}`);
-      }
-      if (options.size) {
-        paginationParams.push(`size=${options.size}`);
-      }
-      if (options.limit) {
-        paginationParams.push(`limit=${options.limit}`);
-      }
-      if (options.offset) {
-        paginationParams.push(`offset=${options.offset}`);
-      }
-      if (options.skip) {
-        paginationParams.push(`skip=${options.skip}`);
-      }
-      if (paginationParams.length > 0) {
-        endpoint += `?${paginationParams.join('&')}`;
-      }
-      
+
+      // The CoPilot /billingplan/list endpoint accepts no query parameters and
+      // returns at most 1000 plans (newest billingPlanId first). Any filtering
+      // must therefore be done client-side on the returned set.
       spinner.text = `Fetching billing plans for merchant ${merchantId}...`;
-      const data = await api.request('GET', endpoint);
-      
+      const data = await api.request('GET', `/billingplan/list/${merchantId}`);
+
       spinner.succeed('Billing plans retrieved successfully');
-      
+
+      const allPlans = (data && data.billingPlans) || [];
+      const totalReturned = allPlans.length;
+
+      // Optional client-side status filter
+      let plans = allPlans;
+      if (options.status) {
+        const wanted = normalizePlanStatus(options.status);
+        if (!wanted) {
+          console.error(chalk.red(`Invalid --status value '${options.status}'. Use active/cancelled/finished or A/C/F.`));
+          process.exit(1);
+        }
+        plans = allPlans.filter(p => p.planStatus === wanted);
+        console.log(chalk.gray(`Filtered to status '${wanted}': ${plans.length} of ${totalReturned} plan(s).`));
+      }
+
       // Display results using the specified format
       const format = options.format || 'pretty';
-      const output = formatters[format].billingPlans(data);
+      const output = formatters[format].billingPlans({ billingPlans: plans });
       console.log(output);
-      
+
+      // The API caps results at 1000; warn so the user knows the list may be truncated.
+      if (totalReturned >= 1000) {
+        console.error(chalk.yellow(
+          '\nWarning: the API returned 1000 plans, which is its maximum. Older plans beyond ' +
+          'the 1000 most recent are not retrievable via billingplan.list and may be missing ' +
+          (options.status ? 'from this filtered view.' : 'from this list.')
+        ));
+      }
+
     } catch (error) {
       spinner.fail('Failed to fetch billing plans');
       throw error;
@@ -362,7 +376,10 @@ const billingPlanCommands = {
     }
   },
 
-  async cancelBillingPlansFromCsv(inputCsvPath, options, config) {
+  async cancelBillingPlansFromCsv(inputCsvPath, options, config, merchantIdOverride) {
+    const overrideMerchantId = merchantIdOverride
+      ? String(merchantIdOverride).trim()
+      : null;
     const isStdin = !inputCsvPath || inputCsvPath === '-';
     const inputText = isStdin
       ? fs.readFileSync(0, 'utf8')
@@ -382,13 +399,21 @@ const billingPlanCommands = {
         'Use --plan-id-column to specify the correct header.'
       );
     }
-    const merchantIdIdx = findMerchantIdColumnIndex(headers, options.merchantIdColumn);
-    if (merchantIdIdx === -1) {
+    // When a merchant ID is supplied on the command line, it applies to every
+    // row (overriding any CSV column), so the CSV only needs plan IDs.
+    const merchantIdIdx = overrideMerchantId
+      ? -1
+      : findMerchantIdColumnIndex(headers, options.merchantIdColumn);
+    if (!overrideMerchantId && merchantIdIdx === -1) {
       throw new Error(
         'Could not find a merchant id column in input CSV. ' +
         'Tried: merchant_id, merchantId, merchId, mid, location. ' +
-        'Use --merchant-id-column to specify the correct header.'
+        'Use --merchant-id-column to specify the correct header, ' +
+        'or pass a merchantId argument to apply one merchant to all rows.'
       );
+    }
+    if (overrideMerchantId) {
+      console.log(chalk.gray(`  Merchant override: ${overrideMerchantId} (applied to all rows; CSV merchant column ignored)`));
     }
 
     const limit = options.limit === undefined || options.limit === null || options.limit === ''
@@ -405,7 +430,7 @@ const billingPlanCommands = {
 
     const rows = (limit === null ? parsed.slice(1) : parsed.slice(1, 1 + limit))
       .map((row) => ({
-        merchantId: String(row[merchantIdIdx] ?? '').trim(),
+        merchantId: overrideMerchantId || String(row[merchantIdIdx] ?? '').trim(),
         billingPlanId: String(row[planIdIdx] ?? '').trim()
       }))
       .filter((r) => r.merchantId && r.billingPlanId);

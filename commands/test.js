@@ -14,7 +14,9 @@ const UNIT_TESTS = [
   'auth.cardpointe',
   'auth.copilot',
   'authentication',
-  'config'
+  'card',
+  'config',
+  'transaction'
 ];
 
 function listTests() {
